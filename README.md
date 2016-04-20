@@ -13,6 +13,7 @@ Standard `go get`:
 
 ```
 $ go get github.com/akolb1/maptrans
+```
 
 ## Usage & Example
 
