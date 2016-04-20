@@ -14,3 +14,6 @@ Standard `go get`:
 ```
 $ go get github.com/akolb1/maptrans
 
+## Usage & Example
+
+For usage and examples see the [Godoc](http://godoc.org/github.com/akolb1/maptrans).
