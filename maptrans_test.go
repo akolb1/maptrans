@@ -48,7 +48,7 @@ func TestMapTranslation(t *testing.T) {
 	t.Parallel()
 	// Create description
 	descr := map[string]interface{}{
-		"E1": MapElement{
+		"E1": Description{
 			TargetName: "e1",
 			Type:       MapTranslation,
 			SubTranslation: map[string]interface{}{
@@ -62,7 +62,7 @@ func TestMapTranslation(t *testing.T) {
 	}
 
 	verifier := map[string]interface{}{
-		"e1": MapElement{
+		"e1": Description{
 			TargetName: "E1",
 			Type:       MapTranslation,
 			SubTranslation: map[string]interface{}{
@@ -88,7 +88,7 @@ func TestMapArrayTranslation(t *testing.T) {
 	t.Parallel()
 	// Create description
 	descr := map[string]interface{}{
-		"M": MapElement{TargetName: "m",
+		"M": Description{TargetName: "m",
 			Type: MapArrayTranslation,
 			SubTranslation: map[string]interface{}{
 				"AA": "a",
@@ -104,7 +104,7 @@ func TestMapArrayTranslation(t *testing.T) {
 	}
 
 	verifier := map[string]interface{}{
-		"m": MapElement{
+		"m": Description{
 			TargetName: "M",
 			Type:       MapArrayTranslation,
 			SubTranslation: map[string]interface{}{
@@ -148,14 +148,14 @@ func TestIdMapTranslation(t *testing.T) {
 	t.Parallel()
 	// Create description
 	descr := map[string]interface{}{
-		"G1": MapElement{TargetName: "g1", MapFunc: IDMap},
+		"G1": Description{TargetName: "g1", MapFunc: IDMap},
 	}
 	src := map[string]interface{}{
 		"G1": map[string]interface{}{"a": "b"},
 	}
 
 	verifier := map[string]interface{}{
-		"g1": MapElement{
+		"g1": Description{
 			TargetName: "G1",
 			Type:       MapTranslation,
 			SubTranslation: map[string]interface{}{
@@ -178,7 +178,7 @@ func TestIdMapTranslation(t *testing.T) {
 func TestStringToLowerMapTranslation(t *testing.T) {
 	t.Parallel()
 	descr := map[string]interface{}{
-		"G1": MapElement{
+		"G1": Description{
 			TargetName: "g1",
 			MapFunc:    StringToLowerMap,
 		},
@@ -197,7 +197,7 @@ func TestStringToLowerMapTranslation(t *testing.T) {
 func TestStringToUpperMapTranslation(t *testing.T) {
 	t.Parallel()
 	descr := map[string]interface{}{
-		"G1": MapElement{
+		"G1": Description{
 			TargetName: "g1",
 			MapFunc:    StringToUpperMap,
 		},
@@ -222,7 +222,7 @@ func TestModifyTranslation(t *testing.T) {
 		return nil
 	}
 	descr := map[string]interface{}{
-		"A": MapElement{
+		"A": Description{
 			TargetName: "a",
 			Type:       ModifyTranslation,
 			ModFunc:    modFunc,
@@ -246,7 +246,7 @@ func TestInsertTranslation(t *testing.T) {
 		return o, nil
 	}
 	descr := map[string]interface{}{
-		value: MapElement{
+		value: Description{
 			TargetName: "a",
 			Type:       InsertTranslation,
 			InsertFunc: insFunc,
@@ -268,7 +268,7 @@ func TestMapMapBad(t *testing.T) {
 	// Create description
 	descr := map[string]interface{}{
 		"A1": "a1",
-		"B1": MapElement{TargetName: "b1", MapFunc: StringMap},
+		"B1": Description{TargetName: "b1", MapFunc: StringMap},
 	}
 	src := map[string]interface{}{"A1": "foo", "B1": 1, "C1": "missing"}
 	_, err := Translate(src, descr)
@@ -279,12 +279,12 @@ func TestBoolMap(t *testing.T) {
 	t.Parallel()
 	// Create description
 	descr := map[string]interface{}{
-		"A": MapElement{TargetName: "a", MapFunc: BoolMap},
-		"B": MapElement{TargetName: "b", MapFunc: BoolMap},
-		"C": MapElement{TargetName: "c", MapFunc: BoolMap},
-		"D": MapElement{TargetName: "d", MapFunc: BoolMap},
-		"E": MapElement{TargetName: "e", MapFunc: BoolMap},
-		"F": MapElement{TargetName: "f", MapFunc: BoolMap},
+		"A": Description{TargetName: "a", MapFunc: BoolMap},
+		"B": Description{TargetName: "b", MapFunc: BoolMap},
+		"C": Description{TargetName: "c", MapFunc: BoolMap},
+		"D": Description{TargetName: "d", MapFunc: BoolMap},
+		"E": Description{TargetName: "e", MapFunc: BoolMap},
+		"F": Description{TargetName: "f", MapFunc: BoolMap},
 	}
 	src := map[string]interface{}{
 		"A": "T",
@@ -311,12 +311,12 @@ func TestBoolToStringMap(t *testing.T) {
 	t.Parallel()
 	// Create description
 	descr := map[string]interface{}{
-		"A": MapElement{TargetName: "a", MapFunc: BoolToStrMap},
-		"B": MapElement{TargetName: "b", MapFunc: BoolToStrMap},
-		"C": MapElement{TargetName: "c", MapFunc: BoolToStrMap},
-		"D": MapElement{TargetName: "d", MapFunc: BoolToStrMap},
-		"E": MapElement{TargetName: "e", MapFunc: BoolToStrMap},
-		"F": MapElement{TargetName: "f", MapFunc: BoolToStrMap},
+		"A": Description{TargetName: "a", MapFunc: BoolToStrMap},
+		"B": Description{TargetName: "b", MapFunc: BoolToStrMap},
+		"C": Description{TargetName: "c", MapFunc: BoolToStrMap},
+		"D": Description{TargetName: "d", MapFunc: BoolToStrMap},
+		"E": Description{TargetName: "e", MapFunc: BoolToStrMap},
+		"F": Description{TargetName: "f", MapFunc: BoolToStrMap},
 	}
 	src := map[string]interface{}{
 		"A": "T",
@@ -343,7 +343,7 @@ func TestStringArray(t *testing.T) {
 	t.Parallel()
 	// Create description
 	descr := map[string]interface{}{
-		"F1": MapElement{TargetName: "f1", MapFunc: StringArrayMap},
+		"F1": Description{TargetName: "f1", MapFunc: StringArrayMap},
 	}
 	src := map[string]interface{}{
 		"F1": []string{"a", "b", "c"},
@@ -365,7 +365,7 @@ func TestStringArray(t *testing.T) {
 func TestNullStringArray(t *testing.T) {
 	t.Parallel()
 	descr := map[string]interface{}{
-		"F": MapElement{
+		"F": Description{
 			TargetName: "f",
 			MapFunc:    StringArrayMap,
 		},
@@ -389,7 +389,7 @@ func TestIdentifier(t *testing.T) {
 	const m = "Hello0World"
 	// Create description
 	descr := map[string]interface{}{
-		"H1": MapElement{TargetName: "h1", MapFunc: IdentifierMap},
+		"H1": Description{TargetName: "h1", MapFunc: IdentifierMap},
 	}
 	src := map[string]interface{}{
 		"H1": m,
@@ -409,7 +409,7 @@ func TestUUID(t *testing.T) {
 	const m = "fc62e0eb-7969-5c24-b83f-955bf7f4ad0b"
 	// Create description
 	descr := map[string]interface{}{
-		"A": MapElement{TargetName: "a", MapFunc: UUIDMap},
+		"A": Description{TargetName: "a", MapFunc: UUIDMap},
 	}
 	src := map[string]interface{}{
 		"A": m,
@@ -429,7 +429,7 @@ func TestIp(t *testing.T) {
 	const a = "1.2.3.4"
 	// Create description
 	descr := map[string]interface{}{
-		"J": MapElement{TargetName: "j", MapFunc: IPAddrMap},
+		"J": Description{TargetName: "j", MapFunc: IPAddrMap},
 	}
 	src := map[string]interface{}{
 		"J": a,
@@ -449,7 +449,7 @@ func TestCidr(t *testing.T) {
 	const a = "1.2.3.4/24"
 	// Create description
 	descr := map[string]interface{}{
-		"A": MapElement{TargetName: "a", MapFunc: CIDRMap},
+		"A": Description{TargetName: "a", MapFunc: CIDRMap},
 	}
 	src := map[string]interface{}{
 		"A": a,
@@ -468,8 +468,8 @@ func TestInteger(t *testing.T) {
 	t.Parallel()
 	// Create description
 	descr := map[string]interface{}{
-		"A": MapElement{TargetName: "a", MapFunc: IntegerMap},
-		"B": MapElement{TargetName: "b", MapFunc: IntegerMap},
+		"A": Description{TargetName: "a", MapFunc: IntegerMap},
+		"B": Description{TargetName: "b", MapFunc: IntegerMap},
 	}
 	src := map[string]interface{}{
 		"A": 1024,
@@ -502,7 +502,7 @@ func TestMissingValues(t *testing.T) {
 func TestBadId(t *testing.T) {
 	t.Parallel()
 	descr := map[string]interface{}{
-		"A1": MapElement{TargetName: "b1", MapFunc: IdentifierMap},
+		"A1": Description{TargetName: "b1", MapFunc: IdentifierMap},
 	}
 	src := map[string]interface{}{"A1": "a$"}
 	_, err := Translate(src, descr)
@@ -512,7 +512,7 @@ func TestBadId(t *testing.T) {
 func TestBadIP(t *testing.T) {
 	t.Parallel()
 	descr := map[string]interface{}{
-		"A1": MapElement{TargetName: "a1", MapFunc: IPAddrMap},
+		"A1": Description{TargetName: "a1", MapFunc: IPAddrMap},
 	}
 	src := map[string]interface{}{"A1": "1.2.3.4/24"}
 	_, err := Translate(src, descr)
@@ -522,7 +522,7 @@ func TestBadIP(t *testing.T) {
 func TestBadCIDR(t *testing.T) {
 	t.Parallel()
 	descr := map[string]interface{}{
-		"A1": MapElement{TargetName: "a1", MapFunc: CIDRMap},
+		"A1": Description{TargetName: "a1", MapFunc: CIDRMap},
 	}
 	src := map[string]interface{}{"A1": "1.2.3.4/245"}
 	_, err := Translate(src, descr)
@@ -533,7 +533,7 @@ func TestMandatoryOption(t *testing.T) {
 	t.Parallel()
 	descr := map[string]interface{}{
 		"X": "Y",
-		"A1": MapElement{TargetName: "a1",
+		"A1": Description{TargetName: "a1",
 			MapFunc:   StringMap,
 			Mandatory: true,
 		},
@@ -546,7 +546,7 @@ func TestMandatoryOption(t *testing.T) {
 func TestInvalidNumbers(t *testing.T) {
 	t.Parallel()
 	descr := map[string]interface{}{
-		"A": MapElement{TargetName: "a",
+		"A": Description{TargetName: "a",
 			MapFunc:   IntegerMap,
 			Mandatory: true,
 		},
@@ -562,7 +562,7 @@ func TestInvalidNumbers(t *testing.T) {
 func TestInvalidUUID(t *testing.T) {
 	t.Parallel()
 	descr := map[string]interface{}{
-		"A": MapElement{TargetName: "a",
+		"A": Description{TargetName: "a",
 			MapFunc: UUIDMap,
 		},
 	}

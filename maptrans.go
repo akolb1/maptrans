@@ -15,13 +15,13 @@ import (
 type TranslationType int
 
 const (
-	// CustomTranslation (default) means that a function should be provided for a
-	// translation
+	// CustomTranslation (default) means that a function should be provided
+	// for a translation
 	CustomTranslation TranslationType = iota
-	// MapTranslation means that translation defines an embedded object
+	// MapTranslation means that translation defines an embedded map
 	MapTranslation
 	// MapArrayTranslation means that the translation defines an array of
-	// objects
+	// maps
 	MapArrayTranslation
 	// ModifyTranslation modifies the map based on the input value
 	ModifyTranslation
@@ -45,15 +45,18 @@ type ModFunc func(map[string]interface{}, map[string]interface{},
 type InsertFunc func(map[string]interface{}, map[string]interface{},
 	string) (interface{}, error)
 
-// MapElement defines translation definition
-type MapElement struct {
+// Description defines translation definition
+// Translations are defined as either "name": "newName" or
+// "name": Description
+type Description struct {
 	InsertFunc     InsertFunc             // Function to insert element
 	Mandatory      bool                   // The field must be present if true
 	MapFunc        MapFunc                // Function that maps value to new value
 	ModFunc        ModFunc                // Function for object modification
-	SubTranslation map[string]interface{} // Subtranslation map for children
-	TargetName     string                 // Name of destination field
-	Type           TranslationType        // Type of translation
+	SubTranslation map[string]interface{} // Sub-translation map for
+	// children
+	TargetName string          // Name of destination field
+	Type       TranslationType // Type of translation
 }
 
 // Custom errors
@@ -124,9 +127,9 @@ func Translate(src map[string]interface{},
 		if isString {
 			continue // Nothing to do
 		}
-		md, ok := v.(MapElement)
+		md, ok := v.(Description)
 		if !ok {
-			return nil, NewInternalError(fmt.Sprintf("%v is not MapElement", v))
+			return nil, NewInternalError(fmt.Sprintf("%v is not Description", v))
 		}
 		if !md.Mandatory {
 			continue // Nothing to do
@@ -144,7 +147,7 @@ func Translate(src map[string]interface{},
 		if !ok {
 			continue
 		}
-		// The description can be either a string or MapElement
+		// The description can be either a string or Description
 		// For string do string conversion
 		if stringConversion, ok := mapDescr.(string); ok {
 			dstStr, err := StringMap(v)
@@ -155,10 +158,10 @@ func Translate(src map[string]interface{},
 			result[stringConversion] = dstStr
 			continue
 		}
-		md, ok := mapDescr.(MapElement)
+		md, ok := mapDescr.(Description)
 		if !ok {
 			return nil, NewInternalError(
-				fmt.Sprintf("%v is not a MapElement", mapDescr))
+				fmt.Sprintf("%v is not a Description", mapDescr))
 		}
 		if md.TargetName == "" {
 			// By default preserve the attribute name
@@ -232,10 +235,10 @@ func Translate(src map[string]interface{},
 		if isString {
 			continue // Nothing to do
 		}
-		md, ok := v.(MapElement)
+		md, ok := v.(Description)
 		if !ok {
 			return nil, NewInternalError(
-				fmt.Sprintf("%v is not a MapElement", v))
+				fmt.Sprintf("%v is not a Description", v))
 		}
 		if md.Type != InsertTranslation {
 			continue
@@ -367,7 +370,8 @@ func IntegerMap(val interface{}) (interface{}, error) {
 	switch val := val.(type) {
 	case int:
 		if val < 0 {
-			return "", fmt.Errorf("%v should be non-negative", val)
+			return "",
+				fmt.Errorf("%v should be non-negative", val)
 		}
 		i := uint64(val)
 		return strconv.FormatUint(i, 10), nil // convert to string
@@ -376,8 +380,9 @@ func IntegerMap(val interface{}) (interface{}, error) {
 	case string:
 		result, err := strconv.ParseUint(val, 10, 64)
 		if err != nil {
-			return false, fmt.Errorf("invalid value '%s' for an integer",
-				val)
+			return false,
+				fmt.Errorf("invalid value '%s' for an integer",
+					val)
 		}
 		return strconv.FormatUint(result, 10), nil
 	case float64:
@@ -426,28 +431,31 @@ func IsSimilar(src map[string]interface{}, dst map[string]interface{},
 			continue
 		}
 
-		// The description can be either a string or MapElement
+		// The description can be either a string or Description
 		// For string do string conversion
 		if stringConversion, ok := mapDescr.(string); ok {
 			srcStr, ok := vSrc.(string)
 			if !ok {
 				return false,
 					NewInternalError(
-						fmt.Sprintf("Invalid description value %v", vSrc))
+						fmt.Sprintf("Invalid description value %v",
+							vSrc))
 			}
 			dstStr, ok := dst[stringConversion].(string)
 			if !ok {
 				return false,
 					NewInternalError(
-						fmt.Sprintf("Missing value for %s", stringConversion))
+						fmt.Sprintf("Missing value for %s",
+							stringConversion))
 			}
 			if srcStr != dstStr {
 				return false,
-					fmt.Errorf("Values %s and %s don't match", srcStr, dstStr)
+					fmt.Errorf("Values %s and %s don't match",
+						srcStr, dstStr)
 			}
 			continue
 		}
-		md, ok := mapDescr.(MapElement)
+		md, ok := mapDescr.(Description)
 		if !ok {
 			return false, NewInternalError(
 				fmt.Sprintf("invalid description %v", mapDescr))
@@ -456,12 +464,15 @@ func IsSimilar(src map[string]interface{}, dst map[string]interface{},
 		case MapTranslation:
 			srcMap, ok := vSrc.(map[string]interface{})
 			if !ok {
-				return false, fmt.Errorf("Invalid source object %v", vSrc)
+				return false,
+					fmt.Errorf("Invalid source object %v",
+						vSrc)
 			}
 			dstMapVal, ok := dst[md.TargetName]
 			if !ok {
 				return false,
-					fmt.Errorf("Missing value for %s in %v", md.TargetName, dst)
+					fmt.Errorf("Missing value for %s in %v",
+						md.TargetName, dst)
 			}
 			dstMap, ok := dstMapVal.(map[string]interface{})
 			if !ok {
@@ -480,18 +491,22 @@ func IsSimilar(src map[string]interface{}, dst map[string]interface{},
 			srcMaps := []map[string]interface{}{}
 			err := mapstructure.Decode(vSrc, &srcMaps)
 			if err != nil {
-				return false, fmt.Errorf("Invalid source object %v: %v", vSrc, err)
+				return false,
+					fmt.Errorf("Invalid source object %v: %v",
+						vSrc, err)
 			}
 			_, ok := dst[md.TargetName]
 			if !ok {
 				return false,
-					fmt.Errorf("Missing value for %s in %v", md.TargetName, dst)
+					fmt.Errorf("Missing value for %s in %v",
+						md.TargetName, dst)
 			}
 			dstMaps := []map[string]interface{}{}
 			e2 := mapstructure.Decode(dst[md.TargetName], &dstMaps)
 			if e2 != nil {
-				return false, fmt.Errorf("Invalid destination object %v",
-					dst[md.TargetName])
+				return false,
+					fmt.Errorf("Invalid destination object %v",
+						dst[md.TargetName])
 			}
 			if len(srcMaps) != len(dstMaps) {
 				return false,
@@ -499,13 +514,15 @@ func IsSimilar(src map[string]interface{}, dst map[string]interface{},
 						len(srcMaps), len(dstMaps))
 			}
 			for i, val := range srcMaps {
-				r, err := IsSimilar(val, dstMaps[i], md.SubTranslation)
+				r, err := IsSimilar(val, dstMaps[i],
+					md.SubTranslation)
 				if !r {
 					return false, err
 				}
 			}
 		default:
-			return false, fmt.Errorf("Unsupported translation type %v", md.Type)
+			return false,
+				fmt.Errorf("Unsupported translation type %v", md.Type)
 		}
 	}
 	return true, nil
