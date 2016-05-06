@@ -12,6 +12,7 @@ import (
 )
 
 // TranslationType identifies type of element translation to perform.
+// It is used as an enum.
 type TranslationType int
 
 const (
@@ -25,21 +26,29 @@ const (
 	MapArrayTranslation
 	// ModifyTranslation modifies the map based on the input value
 	ModifyTranslation
-	// InsertTranslation inserts a missing value
+	// InsertTranslation inserts a missing value to an existing map
 	InsertTranslation
 )
 
-// MapFunc is a function that converts one interface to another
+// MapFunc is a function that converts one interface to another. This is a
+// generic function that maps one value to some other value. All translations
+// are usually defined as MapFunc.
 type MapFunc func(interface{}) (interface{}, error)
 
-// ModFunc takes an map and a value and modifies the map. It
-// returns the resulting (modified) map).
-type ModFunc func(map[string]interface{}, map[string]interface{},
-	interface{}) error
+// ModFunc takes a source map(before translation), the destination map (with
+// some transations already applied) and a value and modifies the map. It
+// returns the error, if any.
+// Parameters:
+//   Source map
+//   Destination map
+//   Value from the source map
+type ModFunc func(src map[string]interface{}, dst map[string]interface{},
+	value interface{}) error
 
 // InsertFunc is used to insert a new element into the map.
 // Parameters:
-//   Original map
+//   Source map
+//   Destination map
 //   Name of the destination element
 // Returns: a value that will be inserted in the map using TargetName.
 type InsertFunc func(map[string]interface{}, map[string]interface{},
@@ -48,15 +57,15 @@ type InsertFunc func(map[string]interface{}, map[string]interface{},
 // Description defines translation definition
 // Translations are defined as either "name": "newName" or
 // "name": Description
+// A SubTranslation is just another embedded translation for a field.
 type Description struct {
 	InsertFunc     InsertFunc             // Function to insert element
 	Mandatory      bool                   // The field must be present if true
 	MapFunc        MapFunc                // Function that maps value to new value
 	ModFunc        ModFunc                // Function for object modification
-	SubTranslation map[string]interface{} // Sub-translation map for
-	// children
-	TargetName string          // Name of destination field
-	Type       TranslationType // Type of translation
+	SubTranslation map[string]interface{} // Sub-translation map for children
+	TargetName     string                 // Name of destination field
+	Type           TranslationType        // Type of translation
 }
 
 // Custom errors
@@ -107,52 +116,57 @@ func NewInvalidProp(name string, reason string) *InvalidPropertyError {
 }
 
 var (
+	// Rather then using complete UUID package we test for valid UUID based on
+	// regexp match
 	validUUID = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}`)
 
+	// Usual definition of an identifier - starts with a letter, followed by
+	// some number of letters or numbers or underscores
 	validID = regexp.MustCompile(`^[a-zA-Z_]+[0-9a-zA-Z_]*$`)
 )
 
-// Translate converts source map[string]interface{} to destination
-// map[string]interface{} using specified description.
+// Translate is the main function that converts source map[string]interface{} to
+// destination map[string]interface{} using specified description.
+// Usually source comes from JSON decoding.
 func Translate(src map[string]interface{},
-	descr map[string]interface{}) (map[string]interface{}, error) {
-	if descr == nil {
+	description map[string]interface{}) (map[string]interface{}, error) {
+	if description == nil {
 		// nil description interpreted as 'no translation'
 		return src, nil
 	}
 	result := map[string]interface{}{}
 	// Check whether any mandatory field is missing
-	for k, v := range descr {
-		_, isString := v.(string)
-		if isString {
+	for k, v := range description {
+		// String translations are never mandatory
+		if _, isString := v.(string); isString {
 			continue // Nothing to do
 		}
 		md, ok := v.(Description)
 		if !ok {
-			return nil, NewInternalError(fmt.Sprintf("%v is not Description", v))
+			return nil, NewInternalError(
+				fmt.Sprintf("%v is not Description", v))
 		}
-		if !md.Mandatory {
-			continue // Nothing to do
-		}
-		_, isPresent := src[k]
-		if !isPresent {
-			return nil, NewMissingAttributeError(k)
+		if md.Mandatory {
+			if _, isPresent := src[k]; !isPresent {
+				return nil, NewMissingAttributeError(k)
+			}
 		}
 	}
 
-	// Walk over all fields present in the source and translate them
-	for k, v := range src {
-		mapDescr, ok := descr[k]
-		// Ignore any description that isn't present in the source
+	// Walk over all fields present in the source and translate them according
+	// to description
+	for attr, value := range src {
+		mapDescr, ok := description[attr]
+		// If the field doesn't have matching description, ignore it.
 		if !ok {
 			continue
 		}
 		// The description can be either a string or Description
-		// For string do string conversion
+		// For strings do string conversion
 		if stringConversion, ok := mapDescr.(string); ok {
-			dstStr, err := StringMap(v)
+			dstStr, err := StringMap(value)
 			if err != nil {
-				return result, NewInvalidProp(k, err.Error())
+				return result, NewInvalidProp(attr, err.Error())
 			}
 			// Save destination in the specified string
 			result[stringConversion] = dstStr
@@ -165,61 +179,62 @@ func Translate(src map[string]interface{},
 		}
 		if md.TargetName == "" {
 			// By default preserve the attribute name
-			md.TargetName = k
+			md.TargetName = attr
 		}
 		switch md.Type {
 		case CustomTranslation:
+			// CustomTranslation should specify MapFunc
 			if md.MapFunc == nil {
 				return nil,
-					NewInternalError("missing translation func for " + k)
+					NewInternalError("missing translation func for " + attr)
 			}
-			dstStr, err := md.MapFunc(v)
+			dstStr, err := md.MapFunc(value)
 			if err != nil {
-				return nil, NewInvalidProp(k, err.Error())
+				return nil, NewInvalidProp(attr, err.Error())
 			}
 			// Save destination in the specified string
 			result[md.TargetName] = dstStr
 		case MapTranslation:
-			// v can be either map[string]interface{} or map[string]interface{}
-			srcMap, ok := v.(map[string]interface{})
+			// value should have type map[string]interface{}
+			srcMap, ok := value.(map[string]interface{})
 			if !ok {
-				srcMap, ok := v.(map[string]interface{})
-				if !ok {
-					return nil, NewInternalError(
-						fmt.Sprintf("invalid type for %v: %T", v, v))
-				}
-				srcMap = map[string]interface{}(srcMap)
+				return nil, NewInternalError(
+					fmt.Sprintf("invalid type for %v: %T",
+						value, value))
 			}
-			trans, transErr := Translate(srcMap, md.SubTranslation)
-			if transErr != nil {
-				return nil, transErr
+			// Translate value according to SubTranslation
+			trans, err := Translate(srcMap, md.SubTranslation)
+			if err != nil {
+				return nil, err
 			}
 			result[md.TargetName] = trans
 		case MapArrayTranslation:
 			// Translate [ {... }, {...} ]
 			srcMaps := []map[string]interface{}{}
-			err := mapstructure.Decode(v, &srcMaps)
+			err := mapstructure.Decode(value, &srcMaps)
 			if err != nil {
 				return nil, NewInternalError(err.Error())
 			}
+			// Translate each value and combine results
 			res := make([]map[string]interface{}, len(srcMaps))
 			for i, val := range srcMaps {
-				trans, transErr := Translate(val, md.SubTranslation)
-				if transErr != nil {
-					return nil, transErr
+				trans, err := Translate(val,
+					md.SubTranslation)
+				if err != nil {
+					return nil, err
 				}
 				res[i] = trans
 			}
 			result[md.TargetName] = res
 		case ModifyTranslation:
-			// Modify result based on value
+			// Modify result based on value. Shoud have ModFunc.
 			if md.ModFunc == nil {
 				return nil,
-					NewInternalError("missing translation func for " + k)
+					NewInternalError("missing translation func for " + attr)
 			}
-			err := md.ModFunc(src, result, v)
+			err := md.ModFunc(src, result, value)
 			if err != nil {
-				return nil, NewInvalidProp(k, err.Error())
+				return nil, NewInvalidProp(attr, err.Error())
 			}
 		case InsertTranslation:
 			// InsertTranslation is only used for missing fields
@@ -230,22 +245,22 @@ func Translate(src map[string]interface{},
 	}
 
 	// Now check whether any value should be inserted
-	for k, v := range descr {
-		_, isString := v.(string)
-		if isString {
+	for attr, value := range description {
+		if _, isString := value.(string); isString {
 			continue // Nothing to do
 		}
-		md, ok := v.(Description)
+		md, ok := value.(Description)
 		if !ok {
 			return nil, NewInternalError(
-				fmt.Sprintf("%v is not a Description", v))
+				fmt.Sprintf("%v is not a Description", value))
 		}
+		// Only look at InsertTranslation fields
 		if md.Type != InsertTranslation {
 			continue
 		}
 		if md.InsertFunc == nil {
 			return nil,
-				NewInternalError("missing translation func for " + k)
+				NewInternalError("missing translation func for " + attr)
 		}
 
 		// Skip anything that is already present
@@ -254,7 +269,7 @@ func Translate(src map[string]interface{},
 		}
 
 		// Get the value to insert
-		val, err := md.InsertFunc(src, result, k)
+		val, err := md.InsertFunc(src, result, attr)
 		if err != nil {
 			return nil, err
 		}
