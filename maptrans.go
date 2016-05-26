@@ -127,7 +127,32 @@ var (
 
 // Translate is the main function that converts source map[string]interface{} to
 // destination map[string]interface{} using specified description.
-// Usually source comes from JSON decoding.
+// Usually source comes from JSON decoding.The following
+// translations are applied:
+//
+// - If translation is defined as "SrcName": "DstName", the field 'SrcName' changes
+// its name to 'DstName' in the resulting map while preserving the value.
+//
+// - If TranslationType in the description is CustomTranslation, the MapFunc is
+// called on the source value, the result is written in the destination map
+// using TargetName as a key.
+//
+// - If TranslationType is MapTranslation, it means that the source value is a
+// map that requires further translation which we apply using SubTranslation
+// definition. The result is written using TargetName as a key.
+//
+// - If TranslationType is MapArrayTranslation, the source is an array of
+// objects (maps). In this case each element is translated using SubTranslation
+// as the description and the resulting array of objects is written using
+// TargetName as the key
+//
+// - If TranslationType is ModifyTranslation, we pass the source and destination
+// maps together with the field value to the ModFunc and it is up to it to put
+// proper value in the destination map
+//
+// - If TranslationType is InsertTranslation, we are inserting key that isn't in
+// the source map. In this case we call the InsertFunc and it inserts value (or
+// values) in the destination map.
 func Translate(src map[string]interface{},
 	description map[string]interface{}) (map[string]interface{}, error) {
 	if description == nil {
