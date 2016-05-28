@@ -17,4 +17,5 @@ $ go get github.com/akolb1/maptrans
 
 ## Usage & Example
 
-For usage and examples see the [Godoc](http://godoc.org/github.com/akolb1/maptrans).
+For usage and examples see the
+[![GoDoc](https://godoc.org/github.com/akolb1/maptrans?status.svg)](https://godoc.org/github.com/akolb1/maptrans)
